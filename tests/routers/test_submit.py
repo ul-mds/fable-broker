@@ -72,7 +72,7 @@ def test_submit_and_delete(
 
     r = test_client.request(
         "DELETE",
-        "/session/",
+        "/session",
         json=SessionDeletionRequest(
             session=match_session.session,
             token=match_session.token,

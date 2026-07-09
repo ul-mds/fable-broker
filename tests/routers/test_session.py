@@ -22,7 +22,7 @@ def test_create(
     session = random_b64(rng)
 
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
@@ -47,7 +47,7 @@ def test_create_400_on_non_positive_expiration(
     rng: Random,
 ):
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=random_b64(rng),
             match_config=MatchConfig(
@@ -67,7 +67,7 @@ def test_create_400_on_expiration_too_high(
     rng: Random,
 ):
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=random_b64(rng),
             match_config=MatchConfig(
@@ -94,11 +94,11 @@ def test_create_400_on_session_exists(
         ),
     )
 
-    r = test_client.post("/session/", json=req.model_dump())
+    r = test_client.post("/session", json=req.model_dump())
 
     assert r.status_code == status.HTTP_201_CREATED
 
-    r = test_client.post("/session/", json=req.model_dump())
+    r = test_client.post("/session", json=req.model_dump())
 
     assert r.status_code == status.HTTP_400_BAD_REQUEST
     assert detail_of(r) == "Session already exists"
@@ -111,7 +111,7 @@ def test_delete(
     session = random_b64(rng)
 
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
@@ -127,7 +127,7 @@ def test_delete(
 
     r = test_client.request(
         "DELETE",
-        "/session/",
+        "/session",
         json=SessionDeletionRequest(
             session=session,
             token=token,
@@ -144,7 +144,7 @@ def test_delete_400_on_delete_invalid_session(
     session = random_b64(rng)
 
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
@@ -160,7 +160,7 @@ def test_delete_400_on_delete_invalid_session(
 
     r = test_client.request(
         "DELETE",
-        "/session/",
+        "/session",
         json=SessionDeletionRequest(
             session=session + "123",
             token=token,
@@ -178,7 +178,7 @@ def test_delete_401_on_unauthorized_delete(
     session = random_b64(rng)
 
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
@@ -193,7 +193,7 @@ def test_delete_401_on_unauthorized_delete(
 
     r = test_client.request(
         "DELETE",
-        "/session/",
+        "/session",
         json=SessionDeletionRequest(
             session=session,
             token=token + "foobar",
@@ -211,7 +211,7 @@ def test_update(
     session = random_b64(rng)
 
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
@@ -229,7 +229,7 @@ def test_update(
 
     def _test_for_update():
         r = test_client.patch(
-            "/session/",
+            "/session",
             json=SessionUpdateRequest(
                 session=session,
                 token=token,
@@ -253,7 +253,7 @@ def test_update_400_on_invalid_session(
     session = random_b64(rng)
 
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
@@ -269,7 +269,7 @@ def test_update_400_on_invalid_session(
     token = resp.token
 
     r = test_client.patch(
-        "/session/",
+        "/session",
         json=SessionUpdateRequest(
             session=session + "123",
             token=token,
@@ -287,7 +287,7 @@ def test_update_401_on_unauthorized_patch(
     session = random_b64(rng)
 
     r = test_client.post(
-        "/session/",
+        "/session",
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
@@ -303,7 +303,7 @@ def test_update_401_on_unauthorized_patch(
     token = resp.token
 
     r = test_client.patch(
-        "/session/",
+        "/session",
         json=SessionUpdateRequest(
             session=session,
             token=token + "foobar",

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/", response_model=SessionCreationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SessionCreationResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(
     req: SessionCreationRequest,
     settings: Settings = Depends(get_settings),
@@ -98,7 +98,7 @@ async def _delete_session_async(
     delete_for_session(driver, req.session)
 
 
-@router.delete("/", status_code=status.HTTP_202_ACCEPTED, response_model=None)
+@router.delete("", status_code=status.HTTP_202_ACCEPTED, response_model=None)
 async def delete_session(
     req: SessionDeletionRequest,
     background_tasks: BackgroundTasks,
@@ -123,7 +123,7 @@ async def delete_session(
     return Response(status_code=status.HTTP_202_ACCEPTED)
 
 
-@router.patch("/", response_model=SessionUpdateResponse, status_code=status.HTTP_200_OK)
+@router.patch("", response_model=SessionUpdateResponse, status_code=status.HTTP_200_OK)
 async def refresh_session(
     req: SessionUpdateRequest,
     settings: Settings = Depends(get_settings),
