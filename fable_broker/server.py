@@ -3,11 +3,12 @@ from datetime import datetime
 import logging
 from typing import AsyncIterator
 
-from fable_broker.dependencies import get_settings, get_session_mapping
-from fable_broker.routers import session
+from fable_model import HealthResponse
 from fastapi import FastAPI
 from fastapi_utils.tasks import repeat_every
 
+from fable_broker.dependencies import get_settings, get_session_mapping
+from fable_broker.routers import session
 from fable_broker.internal.graph import connect_neo4j, delete_all, delete_for_session
 from fable_broker.internal.utils import mask_string
 
@@ -89,10 +90,10 @@ app = FastAPI(
 )
 
 
-@app.get("/health", summary="Check service readiness", operation_id="getHealth")
+@app.get("/health", summary="Check service readiness", operation_id="getHealth", response_model=HealthResponse)
 async def do_healthcheck():
     """Check whether the service is ready to process requests. Responds with a 200 on success."""
-    return {"status": "ok"}
+    return HealthResponse()
 
 
 app.include_router(
