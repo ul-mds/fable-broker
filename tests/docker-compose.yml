@@ -10,7 +10,7 @@ services:
       - "7687:7687"  # Bolt interface
 
   amqp:
-    image: rabbitmq:4.3.2
+    image: rabbitmq:3.13.7
     ports:
       - "5672:5672"
 
