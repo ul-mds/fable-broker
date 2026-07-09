@@ -30,3 +30,25 @@ jobs:
         run: poetry install --with dev
       - name: Test
         run: poetry run pytest tests --cov=fable_broker --cov-branch --cov-fail-under=90
+    services:
+      neo4j:
+        image: neo4j:5.26.27-community
+        env:
+          NEO4J_AUTH: none
+        ports:
+          - 7474:7474
+          - 7687:7687
+      amqp:
+        image: rabbitmq:3.13.7
+        ports:
+          - 5672:5672
+      redis:
+        image: redis:8.6.4
+        ports:
+          - 6379:6379
+      matcher:
+        image: ghcr.io/ul-mds/fable-pprl-service:0.2.1
+        env:
+          ROLE: linkage_unit
+        ports:
+          - 8080:8080
