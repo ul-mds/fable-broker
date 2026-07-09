@@ -1,0 +1,79 @@
+services:
+
+  neo4j:
+    image: neo4j:5.26.27-community
+    environment:
+      - NEO4J_AUTH=none
+    healthcheck:
+      test: [ "CMD", "cypher-shell", "RETURN 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  amqp:
+    image: rabbitmq:3.13.7
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:8.6.4
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  matcher:
+    image: ghcr.io/ul-mds/fable-pprl-service:0.2.1
+    environment:
+      - ROLE=linkage_unit
+
+  broker-worker:
+    image: ghcr.io/ul-mds/fable-broker:0.7.0
+    command: [ "celery", "-A", "fable_broker.worker.tasks", "worker", "--loglevel=INFO" ]
+    depends_on:
+      amqp:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      matcher:
+        condition: service_healthy
+    environment:
+      - AMQP_URL=amqp://guest:guest@amqp:5672//
+      - REDIS_URL=redis://redis:6379/0
+      - NEO4J_URL=bolt://neo4j:7687
+      - PPRL_SERVICE_BASE_URL=http://matcher:8080
+    healthcheck:
+      test: [ "CMD", "celery", "-A", "fable_broker.worker.celery", "inspect", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  broker-api:
+    image: ghcr.io/ul-mds/fable-broker:0.7.0
+    command: [ "uvicorn", "fable_broker.server:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4", "--log-config", "config/logging.yaml" ]
+    depends_on:
+      broker-worker:
+        condition: service_healthy
+    environment:
+      - AMQP_URL=amqp://guest:guest@amqp:5672//
+      - REDIS_URL=redis://redis:6379/0
+      - NEO4J_URL=bolt://neo4j:7687
+      - PPRL_SERVICE_BASE_URL=http://matcher:8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8080/health'); sys.exit(0)" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
