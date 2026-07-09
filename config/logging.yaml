@@ -1,0 +1,37 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  console-formatter:
+    format: "%(asctime)s %(levelname)-10s %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  file-formatter:
+    format: "%(asctime)s %(levelname)-10s %(message)s (%(name)s %(filename)s:%(lineno)d)"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: console-formatter
+    level: INFO
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.handlers.RotatingFileHandler
+    formatter: file-formatter
+    filename: logs/fable-broker.log
+    level: DEBUG
+    encoding: utf-8
+    mode: a
+    maxBytes: 10_000_000
+    backupCount: 5
+
+root:
+  level: INFO
+  handlers: [console, file]
+
+loggers:
+  httpx:
+    level: WARNING
+    propagate: true
+    handlers: []

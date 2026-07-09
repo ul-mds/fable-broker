@@ -1,0 +1,70 @@
+[project]
+name = "fable-broker"
+version = "0.7.0"
+description = "HTTP-based service for handling match sessions and providing results to clients in a Bloom filter-based privacy-preserving record linkage context."
+authors = [
+    {name = "Maximilian Jugl"},
+    {name = "Paul Brassel", email = "paul.brassel@medizin.uni-leipzig.de"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "fastapi[standard] (>=0.136.3,<0.137.0)",
+    "pydantic (>=2.13.4,<3.0.0)",
+    "pydantic-settings (>=2.14.1,<3.0.0)",
+    "celery[librabbitmq,redis] (>=5.6.3,<6.0.0)",
+    "neo4j (>=6.2.0,<7.0.0)",
+    "pyyaml (>=6.0.3,<7.0.0)",
+    "fastapi-utils[all] (>=0.8.0,<0.9.0)",
+    "uvicorn (>=0.49.0,<0.50.0)",
+    "fable-client (>=0.5.0,<0.6.0)",
+    "starlette (>=1.3.1,<2.0.0)",
+    "fable-model (>=0.2.0,<0.3.0)",
+]
+license = "MIT"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14"
+]
+keywords = ["record linkage", "service", "api", "privacy", "bloom filter"]
+
+[project.urls]
+repository = "https://github.com/ul-mds/fable-broker"
+
+[project.scripts]
+fable-broker = "fable_broker.main:run_server"
+
+[tool.poetry]
+packages = [{ include = "fable_broker" }]
+
+[tool.poetry.dependencies]
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: mark a test as an integration test."
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.3,<10.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)",
+    "ruff (>=0.15.16,<0.16.0)",
+    "readme-coverage-badger (>=1.1.0,<2.0.0)",
+    "pre-commit (>=4.6.0,<5.0.0)",
+    "httpx2 (>=2.5.0,<3.0.0)"
+]

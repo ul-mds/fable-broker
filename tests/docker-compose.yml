@@ -1,0 +1,28 @@
+# Spins up all additional services that are needed in order to run tests.
+services:
+
+  neo4j:
+    image: neo4j:5.26.27-community
+    environment:
+      - NEO4J_AUTH=none
+    ports:
+      - "7474:7474"  # HTTP access and web interface
+      - "7687:7687"  # Bolt interface
+
+  amqp:
+    image: rabbitmq:4.3.2
+    ports:
+      - "5672:5672"
+
+  redis:
+    image: redis:8.6.4
+    ports:
+      - "6379:6379"
+
+  matcher:
+    image: ghcr.io/ul-mds/fable-pprl-service
+    pull_policy: always
+    environment:
+      - ROLE=linkage_unit
+    ports:
+      - "8080:8080"
