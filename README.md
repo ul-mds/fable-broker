@@ -322,7 +322,7 @@ docker compose -f tests/docker-compose.yml up -d
 
 You can then execute tests by running `pytest tests`.
 Tests will automatically spin up the web API and a worker.
-If you need them for development purposes, you can start the web API with `fable-broker-web` and a worker process
+If you need them for development purposes, you can start the web API with `fable-broker-api` and a worker process
 with `fable-broker-worker`.
 
 ## License
