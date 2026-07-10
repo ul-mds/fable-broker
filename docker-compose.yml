@@ -36,7 +36,10 @@ services:
 
   broker-worker:
     image: ghcr.io/ul-mds/fable-broker:0.7.0
-    command: [ "celery", "-A", "fable_broker.worker.tasks", "worker", "--loglevel=INFO" ]
+    command: [ "celery", "-A", "fable_broker.worker.celery", "worker", "--loglevel", "INFO" ]
+    # Note that the celery does not automatically rotate its log files. It is recommended to either rotate the log file
+    # with an external tool or to not create a log file at all.
+    # command: [ "celery", "-A", "fable_broker.worker.celery", "worker", "--loglevel", "INFO", "--logfile", "logs/celery.log" ]
     depends_on:
       amqp:
         condition: service_healthy
