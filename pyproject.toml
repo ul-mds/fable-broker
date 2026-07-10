@@ -41,7 +41,8 @@ keywords = ["record linkage", "service", "api", "privacy", "bloom filter"]
 repository = "https://github.com/ul-mds/fable-broker"
 
 [project.scripts]
-fable-broker = "fable_broker.main:run_server"
+fable-broker-api = "fable_broker.main:run_server"
+fable-broker-worker = "fable_broker.worker.celery:start_worker"
 
 [tool.poetry]
 packages = [{ include = "fable_broker" }]
