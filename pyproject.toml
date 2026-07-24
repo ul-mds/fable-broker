@@ -1,6 +1,6 @@
 [project]
 name = "fable-broker"
-version = "0.7.0"
+version = "0.8.0"
 description = "HTTP-based service for handling match sessions and providing results to clients in a Bloom filter-based privacy-preserving record linkage context."
 authors = [
     {name = "Maximilian Jugl"},
