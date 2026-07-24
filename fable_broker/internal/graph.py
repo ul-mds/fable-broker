@@ -104,7 +104,7 @@ def _create_client_vectors_tx(
           value: vector.value,
           meta: vector.meta
         })
-        RETURN collect(id(b))
+        RETURN collect(elementId(b))
         """,
         session=session,
         client=client,
@@ -143,7 +143,7 @@ def insert_vectors_for_client(
 
 def _get_vectors_by_id_tx(tx: Transaction, id_lst: list[int]) -> list[BitVectorEntity]:
     result = tx.run(
-        "MATCH (b:BitVector) WHERE id(b) IN $ids RETURN b.id AS id, b.value AS value",
+        "MATCH (b:BitVector) WHERE elementId(b) IN $ids RETURN b.id AS id, b.value AS value",
         ids=id_lst,
     )
 
@@ -175,7 +175,7 @@ def get_vectors_by_id(driver: Driver, id_lst: list[int]) -> list[BitVectorEntity
 
 def _get_meta_vectors_by_id_tx(tx: Transaction, id_lst: list[int]) -> list[MetaBitVectorEntity]:
     result = tx.run(
-        "MATCH (b:BitVector) WHERE id(b) IN $ids RETURN b.id AS id, b.value AS value, b.meta AS meta",
+        "MATCH (b:BitVector) WHERE elementId(b) IN $ids RETURN b.id AS id, b.value AS value, b.meta AS meta",
         ids=id_lst,
     )
 
@@ -242,7 +242,7 @@ def _insert_matches_tx(
           similarities: match.similarities,
           aggregatedSimilarity: match.aggregatedSimilarity
         }]->(b)
-        RETURN collect(id(s))
+        RETURN collect(elementId(s))
         """,
         session=session,
         domainClient=domain_client,
@@ -298,7 +298,7 @@ def insert_matches(
 
 def _get_vector_ids_for_client_tx(tx: Transaction, session: str, client: str) -> list[int]:
     return tx.run(
-        "MATCH (b:BitVector { session: $session, client: $client }) RETURN collect(id(b))",
+        "MATCH (b:BitVector { session: $session, client: $client }) RETURN collect(elementId(b))",
         session=session,
         client=client,
     ).single(True)[0]

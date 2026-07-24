@@ -131,15 +131,15 @@ def test_get_vectors_by_id(graphdb_driver: Driver, rng: Random):
 
     with graphdb_driver.session() as s:
         id_0 = s.execute_write(
-            lambda tx: tx.run(f'CREATE (b:BitVector {{id: "{b1.id}", value: "{b1.value}"}}) RETURN id(b)').single(True)[
-                0
-            ]
+            lambda tx: tx.run(
+                f'CREATE (b:BitVector {{id: "{b1.id}", value: "{b1.value}"}}) RETURN elementId(b)'
+            ).single(True)[0]
         )
 
         id_1 = s.execute_write(
-            lambda tx: tx.run(f'CREATE (b:BitVector {{id: "{b2.id}", value: "{b2.value}"}}) RETURN id(b)').single(True)[
-                0
-            ]
+            lambda tx: tx.run(
+                f'CREATE (b:BitVector {{id: "{b2.id}", value: "{b2.value}"}}) RETURN elementId(b)'
+            ).single(True)[0]
         )
 
     vectors = get_vectors_by_id(graphdb_driver, [id_0, id_1])
@@ -160,7 +160,7 @@ def test_get_meta_vectors_by_id(graphdb_driver: Driver, rng: Random):
                   value: "{b1.value}",
                   meta: "{serialize_bit_vector_metadata(b1.metadata)}"
                 }})
-                RETURN id(b)
+                RETURN elementId(b)
                 '''
             ).single(True)[0]
         )
@@ -173,7 +173,7 @@ def test_get_meta_vectors_by_id(graphdb_driver: Driver, rng: Random):
                   value: "{b2.value}",
                   meta: "{serialize_bit_vector_metadata(b2.metadata)}"
                 }})
-                RETURN id(b)
+                RETURN elementId(b)
                 '''
             ).single(True)[0]
         )
@@ -276,9 +276,9 @@ def test_insert_empty_matches(graphdb_driver):
 def test_get_vector_ids_for_client(graphdb_driver: Driver):
     with graphdb_driver.session() as s:
         id_0: int = s.execute_write(
-            lambda tx: tx.run('CREATE (b:BitVector {session: "session", client: "client"}) RETURN id(b)').single(True)[
-                0
-            ]
+            lambda tx: tx.run('CREATE (b:BitVector {session: "session", client: "client"}) RETURN elementId(b)').single(
+                True
+            )[0]
         )
 
     vec_ids = get_vector_ids_for_client(graphdb_driver, "session", "client")
