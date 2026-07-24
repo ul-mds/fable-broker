@@ -15,13 +15,13 @@ from fable_model.broker import (
     ClientResultRequest,
 )
 from fable_model.match import BaseMatchRequest
-from fable_client import FableClient, FableError
+from fable_client import PPRLClient, FableError
 from fastapi import APIRouter, status, Depends, HTTPException, Response
 from neo4j import Driver
 from starlette.background import BackgroundTasks
 
 from fable_broker.config import Settings
-from fable_broker.dependencies import get_settings, next_secret, get_session_mapping, get_fable_client, get_neo4j_driver
+from fable_broker.dependencies import get_settings, next_secret, get_session_mapping, get_pprl_client, get_neo4j_driver
 from fable_broker.internal.graph import delete_for_session, get_vector_ids_for_client, get_matches_for_client
 from fable_broker.internal.state import MatchSession
 from fable_broker.internal.utils import random_vector, mask_string
@@ -38,7 +38,7 @@ async def create_session(
     settings: Settings = Depends(get_settings),
     session_token: str = Depends(next_secret),
     session_mapping: dict[str, MatchSession] = Depends(get_session_mapping),
-    client: FableClient = Depends(get_fable_client),
+    client: PPRLClient = Depends(get_pprl_client),
 ):
     """
     Registers a new match session. First, validates the provided match config by sending an example request to the

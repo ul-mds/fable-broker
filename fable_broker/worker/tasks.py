@@ -1,5 +1,5 @@
 from celery.utils.log import get_task_logger
-from fable_client import FableClient
+from fable_client import PPRLClient
 from fable_model.broker import MetaBitVectorEntity, VectorMatchBatch
 from fable_model.match import BaseMatchRequest
 from neo4j import Driver
@@ -34,8 +34,8 @@ def persist_client_vectors(session: str, client: str, vectors: list[dict]):
 @celery_app.task(name="match_and_persist")
 def match_and_persist(raw_batch: dict):
     batch = VectorMatchBatch(**raw_batch)
-    # Instantiate the client here because FableClient is not JSON serializable.
-    client = FableClient(base_url=get_settings().pprl_service_base_url)
+    # Instantiate the client here because PPRLClient is not JSON serializable.
+    client = PPRLClient(base_url=get_settings().pprl_service_base_url)
 
     with connect_neo4j_driver() as driver:
         logger.info(

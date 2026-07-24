@@ -2,7 +2,7 @@ import secrets
 from functools import lru_cache
 from typing import AsyncGenerator, Annotated
 
-from fable_client import FableClient
+from fable_client import PPRLClient
 from fastapi import Depends
 from neo4j import Driver
 
@@ -35,5 +35,5 @@ def next_secret():
     return secrets.token_hex(16)
 
 
-def get_fable_client(settings: Annotated[Settings, Depends(get_settings)]) -> FableClient:
-    return FableClient(base_url=str(settings.pprl_service_base_url))
+def get_pprl_client(settings: Annotated[Settings, Depends(get_settings)]) -> PPRLClient:
+    return PPRLClient(base_url=str(settings.pprl_service_base_url))
