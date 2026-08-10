@@ -47,7 +47,7 @@ jobs:
         ports:
           - 6379:6379
       matcher:
-        image: ghcr.io/ul-mds/fable-pprl-service:0.2.1
+        image: ghcr.io/ul-mds/fable-pprl-service
         env:
           ROLE: linkage_unit
         ports:
