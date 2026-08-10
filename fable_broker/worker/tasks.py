@@ -38,13 +38,25 @@ def shutdown_worker(**_):
         pprl_client = None
 
 
+def get_neo4j_driver() -> Driver:
+    if neo4j_driver is None:
+        raise RuntimeError("Neo4j driver has not been initialized.")
+    return neo4j_driver
+
+
+def get_pprl_client() -> PPRLClient:
+    if pprl_client is None:
+        raise RuntimeError("PPRL client has not been initialized.")
+    return pprl_client
+
+
 @celery_app.task(name="persist_client_vectors")
 def persist_client_vectors(session: str, client: str, vectors: list[dict]):
-    global neo4j_driver
+    driver = get_neo4j_driver()
 
     logger.info("Storing %d vectors for client %s...", len(vectors), mask_string(client))
     vector_ids = insert_vectors_for_client(
-        neo4j_driver,
+        driver,
         session,
         client,
         [MetaBitVectorEntity(**v) for v in vectors],
@@ -55,7 +67,8 @@ def persist_client_vectors(session: str, client: str, vectors: list[dict]):
 
 @celery_app.task(name="match_and_persist")
 def match_and_persist(raw_batch: dict):
-    global neo4j_driver, pprl_client
+    driver = get_neo4j_driver()
+    client = get_pprl_client()
 
     batch = VectorMatchBatch(**raw_batch)
 
@@ -64,7 +77,7 @@ def match_and_persist(raw_batch: dict):
         len(batch.domain.ids),
         mask_string(batch.domain.client),
     )
-    domain_vectors = get_vectors_by_id(neo4j_driver, batch.domain.ids)
+    domain_vectors = get_vectors_by_id(driver, batch.domain.ids)
 
     for range_batch in batch.range:
         logger.info(
@@ -72,9 +85,9 @@ def match_and_persist(raw_batch: dict):
             len(range_batch.ids),
             mask_string(range_batch.client),
         )
-        range_vectors = get_vectors_by_id(neo4j_driver, range_batch.ids)
+        range_vectors = get_vectors_by_id(driver, range_batch.ids)
 
-        matches = pprl_client.match(
+        matches = client.match(
             BaseMatchRequest(config=batch.config).with_vectors(
                 domain_lst=domain_vectors,
                 range_lst=range_vectors,
@@ -82,4 +95,4 @@ def match_and_persist(raw_batch: dict):
         ).matches
         logger.info("Received %d matches", len(matches))
 
-        insert_matches(neo4j_driver, batch.session, batch.domain.client, range_batch.client, matches)
+        insert_matches(driver, batch.session, batch.domain.client, range_batch.client, matches)

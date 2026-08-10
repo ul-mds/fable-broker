@@ -15,7 +15,7 @@ from starlette import status
 
 from fable_broker.server import app
 from fable_broker.worker.celery import celery_app
-from fable_broker.worker.tasks import init_worker, shutdown_worker
+from fable_broker.worker.tasks import init_worker, shutdown_worker, get_neo4j_driver, get_pprl_client
 from tests.helpers import random_b64, detail_of
 
 
@@ -70,6 +70,16 @@ def eager_celery_worker():
         task_always_eager=True,
         task_eager_propagates=True,  # Exceptions in tasks raise immediately.
     )
+
+    with pytest.raises(RuntimeError) as e:
+        get_neo4j_driver()
+
+    assert str(e.value) == "Neo4j driver has not been initialized."
+
+    with pytest.raises(RuntimeError) as e:
+        get_pprl_client()
+
+    assert str(e.value) == "PPRL client has not been initialized."
 
     init_worker()
 
