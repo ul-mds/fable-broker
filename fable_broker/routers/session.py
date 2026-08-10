@@ -171,7 +171,7 @@ async def _submit_vectors_async(
         [v.model_dump() for v in req.vectors],
     )
 
-    vector_ids: list[int] = task.get(timeout=10)
+    vector_ids: list[str] = task.get(timeout=10)
 
     logger.debug("Vectors persisted, fetching range vectors...")
 

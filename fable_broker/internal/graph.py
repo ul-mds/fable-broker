@@ -1,4 +1,4 @@
-from neo4j import Driver, GraphDatabase, Transaction
+from neo4j import Driver, GraphDatabase, ManagedTransaction
 
 from fable_model.broker import BitVectorMetadata, MetaBitVectorEntity, MatchedClientVector
 from fable_model.common import BitVectorEntity
@@ -89,11 +89,11 @@ def deserialize_bit_vector_metadata(s: str) -> list[BitVectorMetadata]:
 
 
 def _create_client_vectors_tx(
-    tx: Transaction,
+    tx: ManagedTransaction,
     session: str,
     client: str,
     vector_lst: list[MetaBitVectorEntity],
-) -> list[int]:
+) -> list[str]:
     return tx.run(
         """
         UNWIND $vectors AS vector
@@ -117,7 +117,7 @@ def insert_vectors_for_client(
     session: str,
     client: str,
     vector_lst: list[MetaBitVectorEntity],
-) -> list[int]:
+) -> list[str]:
     """
     Inserts vectors into the database, assigning them to the specified client partaking in the specified match session.
 
@@ -141,7 +141,7 @@ def insert_vectors_for_client(
     return id_lst
 
 
-def _get_vectors_by_id_tx(tx: Transaction, id_lst: list[int]) -> list[BitVectorEntity]:
+def _get_vectors_by_id_tx(tx: ManagedTransaction, id_lst: list[str]) -> list[BitVectorEntity]:
     result = tx.run(
         "MATCH (b:BitVector) WHERE elementId(b) IN $ids RETURN b.id AS id, b.value AS value",
         ids=id_lst,
@@ -156,7 +156,7 @@ def _get_vectors_by_id_tx(tx: Transaction, id_lst: list[int]) -> list[BitVectorE
     ]
 
 
-def get_vectors_by_id(driver: Driver, id_lst: list[int]) -> list[BitVectorEntity]:
+def get_vectors_by_id(driver: Driver, id_lst: list[str]) -> list[BitVectorEntity]:
     """
     Returns vectors by their internal node ID.
 
@@ -173,7 +173,7 @@ def get_vectors_by_id(driver: Driver, id_lst: list[int]) -> list[BitVectorEntity
     return vector_lst
 
 
-def _get_meta_vectors_by_id_tx(tx: Transaction, id_lst: list[int]) -> list[MetaBitVectorEntity]:
+def _get_meta_vectors_by_id_tx(tx: ManagedTransaction, id_lst: list[str]) -> list[MetaBitVectorEntity]:
     result = tx.run(
         "MATCH (b:BitVector) WHERE elementId(b) IN $ids RETURN b.id AS id, b.value AS value, b.meta AS meta",
         ids=id_lst,
@@ -189,7 +189,7 @@ def _get_meta_vectors_by_id_tx(tx: Transaction, id_lst: list[int]) -> list[MetaB
     ]
 
 
-def get_meta_vectors_by_id(driver: Driver, id_lst: list[int]) -> list[MetaBitVectorEntity]:
+def get_meta_vectors_by_id(driver: Driver, id_lst: list[str]) -> list[MetaBitVectorEntity]:
     """
     Returns vectors by their internal node ID.
 
@@ -207,12 +207,12 @@ def get_meta_vectors_by_id(driver: Driver, id_lst: list[int]) -> list[MetaBitVec
 
 
 def _insert_matches_tx(
-    tx: Transaction,
+    tx: ManagedTransaction,
     session: str,
     domain_client: str,
     range_client: str,
     matches: list[Match],
-) -> list[int]:
+) -> list[str]:
     # TODO: this can be improved
     # MATCH (a:BitVector) WHERE id(a) IN [domain_id, range_id]
     # WITH COLLECT(a) AS l
@@ -296,7 +296,7 @@ def insert_matches(
     return rel_ids
 
 
-def _get_vector_ids_for_client_tx(tx: Transaction, session: str, client: str) -> list[int]:
+def _get_vector_ids_for_client_tx(tx: ManagedTransaction, session: str, client: str) -> list[str]:
     return tx.run(
         "MATCH (b:BitVector { session: $session, client: $client }) RETURN collect(elementId(b))",
         session=session,
@@ -304,7 +304,7 @@ def _get_vector_ids_for_client_tx(tx: Transaction, session: str, client: str) ->
     ).single(True)[0]
 
 
-def get_vector_ids_for_client(driver: Driver, session: str, client: str) -> list[int]:
+def get_vector_ids_for_client(driver: Driver, session: str, client: str) -> list[str]:
     """
     Returns the internal node IDs for the vectors stored for a particular client.
 
@@ -322,7 +322,7 @@ def get_vector_ids_for_client(driver: Driver, session: str, client: str) -> list
     return vec_ids
 
 
-def _get_matches_for_client_tx(tx: Transaction, session: str, client: str) -> list[MatchedClientVector]:
+def _get_matches_for_client_tx(tx: ManagedTransaction, session: str, client: str) -> list[MatchedClientVector]:
     result = tx.run(
         """
         MATCH (a:BitVector {session: $session, client: $client })
