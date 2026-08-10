@@ -2,10 +2,10 @@ import os
 
 from celery import Celery
 
-from fable_broker.dependencies import get_settings
+from fable_broker.config import Settings
 
 
-celery_app = Celery("worker", broker=get_settings().amqp_url, backend=get_settings().redis_url)
+celery_app = Celery("worker", broker=Settings().amqp_url, backend=Settings().redis_url)
 
 celery_app.autodiscover_tasks(["fable_broker.worker"])
 

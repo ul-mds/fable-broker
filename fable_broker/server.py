@@ -1,24 +1,27 @@
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, ExitStack
 from datetime import datetime
 import logging
 from typing import AsyncIterator
 
+from fable_client import PPRLClient
 from fable_model import HealthResponse
 from fastapi import FastAPI
 from fastapi_utils.tasks import repeat_every
+from neo4j import Driver
 
-from fable_broker.dependencies import get_settings, get_session_mapping
+from fable_broker.config import Settings
+from fable_broker.dependencies import get_session_mapping
+from fable_broker.models import AppState
 from fable_broker.routers import session
 from fable_broker.internal.graph import connect_neo4j, delete_all, delete_for_session
 from fable_broker.internal.utils import mask_string
 
 
 logger = logging.getLogger(__name__)
-expose_docs = get_settings().expose_docs
+expose_docs = Settings().expose_docs
 
 
-@repeat_every(seconds=get_settings().task_cleanup_interval, wait_first=True)
-def free_session_tasks():
+def free_session_tasks(driver: Driver):
     logger.debug("Running session cleanup task...")
     now = datetime.now().timestamp()
 
@@ -29,22 +32,18 @@ def free_session_tasks():
         if now > match_session.expires_at:
             sessions_to_clear.append(ses)
 
-    # Check because we don't want to create a new driver every time.
-    if len(sessions_to_clear) != 0:
-        # Create driver so that we can clear multiple sessions at once.
-        with connect_neo4j(get_settings().neo4j_url) as driver:
-            for s in sessions_to_clear:
-                logger.debug(f"Clearing session {s} because it expired")
+    for s in sessions_to_clear:
+        logger.debug(f"Clearing session {s} because it expired")
 
-                # Clear tasks.
-                for task in get_session_mapping()[s].match_tasks:
-                    if not task.ready():
-                        task.revoke()
+        # Clear tasks.
+        for task in get_session_mapping()[s].match_tasks:
+            if not task.ready():
+                task.revoke()
 
-                # Remove mapping.
-                del get_session_mapping()[s]
-                # Delete from cache.
-                delete_for_session(driver, s)
+        # Remove mapping.
+        del get_session_mapping()[s]
+        # Delete from cache.
+        delete_for_session(driver, s)
 
     # Second pass: Collect all tasks that are finished.
     for ses, match_session in get_session_mapping().items():
@@ -60,14 +59,34 @@ def free_session_tasks():
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    logger.info("Clearing neo4j cache...")
-    with connect_neo4j(get_settings().neo4j_url) as driver:
-        delete_all(driver)
+async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
+    s = Settings()
+    stack = ExitStack()
 
-    await free_session_tasks()
+    pprl_client = PPRLClient(base_url=s.pprl_service_base_url)
+    stack.callback(pprl_client.close)
+
+    driver = connect_neo4j(s.neo4j_url)
+    stack.callback(driver.close)
+
+    app_.state.app_state = AppState(
+        settings=s,
+        pprl_client=pprl_client,
+        neo4j_driver=driver,
+    )
+
+    logger.info("Clearing neo4j cache...")
+    delete_all(driver)
+
+    @repeat_every(seconds=s.task_cleanup_interval, wait_first=True)
+    def _free_session_tasks():
+        free_session_tasks(driver)
+
+    await _free_session_tasks()
 
     yield
+
+    stack.close()
 
 
 app = FastAPI(

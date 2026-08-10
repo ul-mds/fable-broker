@@ -46,7 +46,8 @@ def rng() -> Random:
 
 @pytest.fixture(scope="session")
 def test_client():
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 @pytest.fixture
