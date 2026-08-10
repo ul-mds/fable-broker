@@ -15,6 +15,7 @@ from starlette import status
 
 from fable_broker.server import app
 from fable_broker.worker.celery import celery_app
+from fable_broker.worker.tasks import init_worker, shutdown_worker
 from tests.helpers import random_b64, detail_of
 
 
@@ -70,7 +71,11 @@ def eager_celery_worker():
         task_eager_propagates=True,  # Exceptions in tasks raise immediately.
     )
 
+    init_worker()
+
     yield
+
+    shutdown_worker()
 
     # Reset since it is a global config.
     celery_app.conf.update(

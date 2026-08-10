@@ -1,4 +1,5 @@
 from celery.utils.log import get_task_logger
+from celery.signals import worker_process_init, worker_process_shutdown
 from fable_client import PPRLClient
 from fable_model.broker import MetaBitVectorEntity, VectorMatchBatch
 from fable_model.match import BaseMatchRequest
@@ -12,53 +13,73 @@ from fable_broker.worker.celery import celery_app
 
 logger = get_task_logger(__name__)
 
+neo4j_driver: Driver | None = None
+pprl_client: PPRLClient | None = None
 
-def connect_neo4j_driver() -> Driver:
-    return connect_neo4j(Settings().neo4j_url)
+
+@worker_process_init.connect
+def init_worker(**_):
+    global neo4j_driver, pprl_client
+
+    neo4j_driver = connect_neo4j(Settings().neo4j_url)
+    pprl_client = PPRLClient(base_url=Settings().pprl_service_base_url)
+
+
+@worker_process_shutdown.connect
+def shutdown_worker(**_):
+    global neo4j_driver, pprl_client
+
+    if neo4j_driver is not None:
+        neo4j_driver.close()
+        neo4j_driver = None
+
+    if pprl_client is not None:
+        pprl_client.close()
+        pprl_client = None
 
 
 @celery_app.task(name="persist_client_vectors")
 def persist_client_vectors(session: str, client: str, vectors: list[dict]):
-    with connect_neo4j_driver() as driver:
-        logger.info("Storing %d vectors for client %s...", len(vectors), mask_string(client))
-        vector_ids = insert_vectors_for_client(
-            driver,
-            session,
-            client,
-            [MetaBitVectorEntity(**v) for v in vectors],
-        )
+    global neo4j_driver
+
+    logger.info("Storing %d vectors for client %s...", len(vectors), mask_string(client))
+    vector_ids = insert_vectors_for_client(
+        neo4j_driver,
+        session,
+        client,
+        [MetaBitVectorEntity(**v) for v in vectors],
+    )
 
     return vector_ids
 
 
 @celery_app.task(name="match_and_persist")
 def match_and_persist(raw_batch: dict):
-    batch = VectorMatchBatch(**raw_batch)
-    # Instantiate the client here because PPRLClient is not JSON serializable.
-    client = PPRLClient(base_url=Settings().pprl_service_base_url)
+    global neo4j_driver, pprl_client
 
-    with connect_neo4j_driver() as driver:
+    batch = VectorMatchBatch(**raw_batch)
+
+    logger.info(
+        "Fetching %d vectors for client %s...",
+        len(batch.domain.ids),
+        mask_string(batch.domain.client),
+    )
+    domain_vectors = get_vectors_by_id(neo4j_driver, batch.domain.ids)
+
+    for range_batch in batch.range:
         logger.info(
             "Fetching %d vectors for client %s...",
-            len(batch.domain.ids),
-            mask_string(batch.domain.client),
+            len(range_batch.ids),
+            mask_string(range_batch.client),
         )
-        domain_vectors = get_vectors_by_id(driver, batch.domain.ids)
+        range_vectors = get_vectors_by_id(neo4j_driver, range_batch.ids)
 
-        for range_batch in batch.range:
-            logger.info(
-                "Fetching %d vectors for client %s...",
-                len(range_batch.ids),
-                mask_string(range_batch.client),
-            )
-            range_vectors = get_vectors_by_id(driver, range_batch.ids)
+        matches = pprl_client.match(
+            BaseMatchRequest(config=batch.config).with_vectors(
+                domain_lst=domain_vectors,
+                range_lst=range_vectors,
+            ),
+        ).matches
+        logger.info("Received %d matches", len(matches))
 
-            matches = client.match(
-                BaseMatchRequest(config=batch.config).with_vectors(
-                    domain_lst=domain_vectors,
-                    range_lst=range_vectors,
-                ),
-            ).matches
-            logger.info("Received %d matches", len(matches))
-
-            insert_matches(driver, batch.session, batch.domain.client, range_batch.client, matches)
+        insert_matches(neo4j_driver, batch.session, batch.domain.client, range_batch.client, matches)
