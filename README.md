@@ -59,7 +59,7 @@ By default, this limit is set to one hour.
 ```python
 from datetime import datetime
 from fable_model.broker import SessionCreationRequest, SessionCreationResponse
-from fable_model.match import MatchConfig
+from fable_model.match import MatchConfig, SimilarityAggregator, SimilarityMeasure
 from fastapi import status
 import httpx
 
@@ -69,9 +69,9 @@ r = httpx.post(
     json=SessionCreationRequest(
         session="my-session-id",
         match_config=MatchConfig(
-            measures=["jaccard", "dice"],
+            measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
             thresholds=[0.9],
-            aggregator="avg",
+            aggregator=SimilarityAggregator.avg,
         ),
         expires_in=1_800,
     ).model_dump(),
