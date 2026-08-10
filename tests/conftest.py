@@ -21,7 +21,7 @@ from tests.helpers import random_b64, detail_of
 
 @pytest.fixture(scope="session")
 def pprl_service_base_url() -> str:
-    return os.getenv("PPRL_SERVICE_BASE_URL", "http://localhost:8080/")
+    return os.getenv("PPRL_SERVICE_BASE_URL", "http://localhost:8080")
 
 
 @pytest.fixture(scope="session")
