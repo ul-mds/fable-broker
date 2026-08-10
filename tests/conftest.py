@@ -14,7 +14,6 @@ from neo4j import Driver
 from starlette import status
 
 from fable_broker.server import app
-from fable_broker.internal.graph import connect_neo4j
 from fable_broker.worker.celery import celery_app
 from tests.helpers import random_b64, detail_of
 
@@ -51,8 +50,8 @@ def test_client():
 
 
 @pytest.fixture
-def graphdb_driver(neo4j_url) -> Iterator[Driver]:
-    driver = connect_neo4j(neo4j_url)
+def graphdb_driver(test_client) -> Iterator[Driver]:
+    driver = test_client.app.state.app_state.neo4j_driver
 
     with driver.session() as s:
         s.run("MATCH (n) DETACH DELETE n")
@@ -61,8 +60,6 @@ def graphdb_driver(neo4j_url) -> Iterator[Driver]:
 
     with driver.session() as s:
         s.run("MATCH (n) DETACH DELETE n")
-
-    driver.close()
 
 
 @pytest.fixture(scope="session", autouse=True)
