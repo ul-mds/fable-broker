@@ -8,7 +8,7 @@ from fable_model.broker import (
     SessionUpdateResponse,
     SessionUpdateRequest,
 )
-from fable_model.match import MatchConfig
+from fable_model.match import MatchConfig, SimilarityMeasure, SimilarityAggregator
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -26,9 +26,9 @@ def test_create(
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard", "cosine", "roger_tanimoto"],
+                measures=[SimilarityMeasure.jaccard, SimilarityMeasure.cosine, SimilarityMeasure.roger_tanimoto],
                 thresholds=[0.9],
-                aggregator="min",
+                aggregator=SimilarityAggregator.min,
             ),
         ).model_dump(),
     )
@@ -51,7 +51,7 @@ def test_create_400_on_non_positive_expiration(
         json=SessionCreationRequest(
             session=random_b64(rng),
             match_config=MatchConfig(
-                measures=["jaccard", "dice"],
+                measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
                 thresholds=[0.9, 0.8],
             ),
             expires_in=0,
@@ -71,7 +71,7 @@ def test_create_400_on_expiration_too_high(
         json=SessionCreationRequest(
             session=random_b64(rng),
             match_config=MatchConfig(
-                measures=["jaccard", "dice"],
+                measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
                 thresholds=[0.9, 0.8],
             ),
             expires_in=3601,
@@ -89,7 +89,7 @@ def test_create_400_on_session_exists(
     req = SessionCreationRequest(
         session=random_b64(rng),
         match_config=MatchConfig(
-            measures=["jaccard"],
+            measures=[SimilarityMeasure.jaccard],
             thresholds=[0.8],
         ),
     )
@@ -115,7 +115,7 @@ def test_delete(
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard"],
+                measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
             ),
         ).model_dump(),
@@ -148,7 +148,7 @@ def test_delete_400_on_delete_invalid_session(
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard"],
+                measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
             ),
         ).model_dump(),
@@ -182,7 +182,7 @@ def test_delete_401_on_unauthorized_delete(
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard"],
+                measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
             ),
         ).model_dump(),
@@ -215,7 +215,7 @@ def test_update(
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard"],
+                measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
             ),
         ).model_dump(),
@@ -257,7 +257,7 @@ def test_update_400_on_invalid_session(
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard"],
+                measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
             ),
         ).model_dump(),
@@ -291,7 +291,7 @@ def test_update_401_on_unauthorized_patch(
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard"],
+                measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
             ),
         ).model_dump(),

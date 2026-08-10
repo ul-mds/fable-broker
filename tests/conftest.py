@@ -7,7 +7,7 @@ from fable_model.broker import (
     SessionCreationRequest,
     SessionDeletionRequest,
 )
-from fable_model.match import MatchConfig
+from fable_model.match import MatchConfig, SimilarityMeasure, SimilarityAggregator
 from fastapi.testclient import TestClient
 import pytest
 from neo4j import Driver
@@ -103,9 +103,9 @@ def match_session(test_client: TestClient, rng: Random) -> Iterator[SessionCreat
         json=SessionCreationRequest(
             session=session,
             match_config=MatchConfig(
-                measures=["jaccard", "dice"],
+                measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
                 thresholds=[0.8],
-                aggregator="avg",
+                aggregator=SimilarityAggregator.avg,
             ),
         ).model_dump(),
     )

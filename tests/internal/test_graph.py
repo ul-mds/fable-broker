@@ -1,6 +1,6 @@
 from fable_model.broker import BitVectorMetadata, MatchedClientVector
 from fable_model.match import Match
-from neo4j import Driver, Transaction, Record
+from neo4j import Driver, ManagedTransaction, Record
 import pytest
 from random import Random
 
@@ -51,7 +51,7 @@ def test_deserialize_bit_vector_metadata_error():
 
 
 def test_delete_all(graphdb_driver: Driver):
-    def create_test_nodes_tx(tx: Transaction) -> Record:
+    def create_test_nodes_tx(tx: ManagedTransaction) -> Record:
         result = tx.run(
             """
             CREATE (a:BitVector {foo: 1})
@@ -62,7 +62,7 @@ def test_delete_all(graphdb_driver: Driver):
         )
         return result.single(True)
 
-    def count_test_nodes_tx(tx: Transaction) -> int:
+    def count_test_nodes_tx(tx: ManagedTransaction) -> int:
         result = tx.run("MATCH (n:BitVector) RETURN COUNT(n)")
         return result.single(True)[0]
 
@@ -77,13 +77,13 @@ def test_delete_all(graphdb_driver: Driver):
 
 
 def test_delete_for_session(graphdb_driver: Driver):
-    def create_test_vector_node_tx(tx: Transaction, session: str) -> Record:
+    def create_test_vector_node_tx(tx: ManagedTransaction, session: str) -> Record:
         return tx.run(
             "CREATE (b:BitVector {session: $session}) RETURN id(b)",
             session=session,
         ).single(True)
 
-    def count_session_vector_tx(tx: Transaction, session: str) -> int:
+    def count_session_vector_tx(tx: ManagedTransaction, session: str) -> int:
         return tx.run(
             "MATCH (b:BitVector {session: $session}) RETURN COUNT(b)",
             session=session,
@@ -101,7 +101,7 @@ def test_delete_for_session(graphdb_driver: Driver):
 
 
 def test_insert_vector_for_client(graphdb_driver: Driver, rng: Random):
-    def count_client_vector_tx(tx: Transaction, session: str, client: str) -> int:
+    def count_client_vector_tx(tx: ManagedTransaction, session: str, client: str) -> int:
         return tx.run(
             "MATCH (b:BitVector { session: $session, client: $client }) RETURN COUNT(b)",
             session=session,

@@ -2,6 +2,7 @@ from random import Random
 
 from _pytest.monkeypatch import MonkeyPatch
 from fable_model.broker import MatchConfig, SessionCreationRequest
+from fable_model.match import SimilarityMeasure
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -28,7 +29,7 @@ def test_cleanup_expired_session(
             json=SessionCreationRequest(
                 session=session,
                 match_config=MatchConfig(
-                    measures=["jaccard"],
+                    measures=[SimilarityMeasure.jaccard],
                     thresholds=[0.8],
                 ),
                 expires_in=1,
