@@ -4,7 +4,7 @@ import logging
 from typing import AsyncIterator
 
 from fable_client import PPRLClient
-from fable_model import HealthResponse
+from fable_model import HealthResponse, ServiceBaseInformation
 from fastapi import FastAPI
 from fastapi_utils.tasks import repeat_every
 from neo4j import Driver
@@ -15,6 +15,7 @@ from fable_broker.models import AppState
 from fable_broker.routers import session
 from fable_broker.internal.graph import connect_neo4j, delete_all, delete_for_session
 from fable_broker.internal.utils import mask_string
+from fable_broker.version import __version__
 
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,17 @@ app = FastAPI(
     docs_url="/docs" if expose_docs else None,
     redoc_url="/redoc" if expose_docs else None,
 )
+
+
+@app.get(
+    "/",
+    summary="Get basic information about this service",
+    operation_id="getInfo",
+    response_model=ServiceBaseInformation,
+)
+async def get_info() -> ServiceBaseInformation:
+    """Get basic information about this service. Responds with a 200 on success."""
+    return ServiceBaseInformation(version=__version__)
 
 
 @app.get("/health", summary="Check service readiness", operation_id="getHealth", response_model=HealthResponse)
