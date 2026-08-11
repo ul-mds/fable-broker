@@ -20,6 +20,7 @@ RUN mkdir logs
 COPY --from=builder /tmp/requirements.txt ./
 COPY ./config/logging.yaml ./config/logging.yaml
 COPY ./fable_broker ./fable_broker
+COPY ./pyproject.toml ./
 
 RUN set -ex && \
   groupadd --system nonroot && \
