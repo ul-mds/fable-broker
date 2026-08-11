@@ -31,11 +31,13 @@ services:
 
   matcher:
     image: ghcr.io/ul-mds/fable-pprl-service
+    pull_policy: always
     environment:
       - ROLE=linkage_unit
 
   broker-worker:
     image: ghcr.io/ul-mds/fable-broker
+    pull_policy: always
     command: [ "celery", "-A", "fable_broker.worker.celery", "worker", "--loglevel", "INFO" ]
     # Note that the celery does not automatically rotate its log files. It is recommended to either rotate the log file
     # with an external tool or to not create a log file at all.
@@ -63,6 +65,7 @@ services:
 
   broker-api:
     image: ghcr.io/ul-mds/fable-broker
+    pull_policy: always
     command: [ "uvicorn", "fable_broker.server:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4", "--log-config", "config/logging.yaml" ]
     depends_on:
       broker-worker:
