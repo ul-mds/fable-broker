@@ -92,6 +92,7 @@ async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="FABLE Broker",
+    version=__version__,
     lifespan=lifespan,
     openapi_tags=[
         {
