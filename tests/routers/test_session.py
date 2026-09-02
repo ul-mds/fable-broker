@@ -8,13 +8,14 @@ from fable_model.broker import (
     SessionDeletionRequest,
     SessionUpdateResponse,
     SessionUpdateRequest,
+    SessionGetResponse,
 )
 from fable_model.match import MatchConfig, SimilarityMeasure, SimilarityAggregator
 from fastapi import status
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from tests.helpers import detail_of, assert_eventually
+from tests.helpers import detail_of, assert_eventually, random_b64
 
 
 def test_create(
@@ -318,3 +319,34 @@ def test_update_401_on_unauthorized_patch(
 
     assert r.status_code == status.HTTP_401_UNAUTHORIZED
     assert detail_of(r) == "Incorrect session token"
+
+
+def test_get(
+    test_client: TestClient,
+    match_session: SessionCreationResponse,
+):
+    r = test_client.get(f"/session/{match_session.session.get_secret_value()}")
+
+    assert r.status_code == status.HTTP_200_OK
+
+    res = SessionGetResponse(**r.json())
+    # This config is the one that gets defined inside the fixture.
+    match_config = MatchConfig(
+        measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
+        thresholds=[0.8],
+        aggregator=SimilarityAggregator.avg,
+    )
+
+    assert res.session == match_session.session
+    assert res.expires_at == match_session.expires_at
+    assert res.match_config == match_config
+
+
+def test_get_404_session_not_found(
+    test_client: TestClient,
+    rng: Random,
+):
+    r = test_client.get(f"/session/{random_b64(rng)}")
+
+    assert r.status_code == status.HTTP_404_NOT_FOUND
+    assert detail_of(r) == "Session doesn't exist"

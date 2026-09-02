@@ -13,6 +13,7 @@ from fable_model.broker import (
     VectorMatchBatch,
     ClientResultResponse,
     ClientResultRequest,
+    SessionGetResponse,
 )
 from fable_model.match import BaseMatchRequest
 from fable_client import PPRLClient, FableError
@@ -86,6 +87,23 @@ async def create_session(
     )
 
     return SessionCreationResponse(session=req.session, token=session_token, expires_at=exp_ts)
+
+
+@router.get("/{session}", response_model=SessionGetResponse, status_code=status.HTTP_200_OK)
+async def get_session(
+    session: SecretStr,
+    session_mapping: dict[SecretStr, MatchSession] = Depends(get_session_mapping),
+):
+    if session not in session_mapping:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Session doesn't exist")
+
+    match_session = session_mapping[session]
+
+    return SessionGetResponse(
+        match_config=match_session.config,
+        expires_at=match_session.expires_at,
+        session=session,
+    )
 
 
 async def _delete_session_async(
