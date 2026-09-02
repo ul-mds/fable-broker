@@ -198,7 +198,6 @@ my-session-id
   "aggregator_args": {},
   "method": "crosswise"
 }
-
 ```
 
 ### Submitting vectors and receiving results
