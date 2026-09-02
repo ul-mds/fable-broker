@@ -1,11 +1,13 @@
 from random import Random
+from typing import Callable
 
 from fable_model.broker import SessionCreationResponse, ClientSubmissionRequest, SessionDeletionRequest
 from fastapi import status
 from fastapi.testclient import TestClient
 from neo4j import Driver
+from pydantic import SecretStr
 
-from tests.helpers import random_b64, random_meta_vec, assert_eventually, detail_of
+from tests.helpers import random_meta_vec, assert_eventually, detail_of
 
 
 def get_client_vector_count(
@@ -29,8 +31,9 @@ def test_submit(
     rng: Random,
     match_session: SessionCreationResponse,
     graphdb_driver: Driver,
+    secret_factory: Callable[[], SecretStr],
 ):
-    client = random_b64(rng)
+    client = secret_factory()
     target_vec_count = 5
 
     r = test_client.post(
@@ -45,7 +48,10 @@ def test_submit(
     assert r.status_code == status.HTTP_202_ACCEPTED
 
     def check_vector_persist():
-        assert get_client_vector_count(graphdb_driver, match_session.session, client) == target_vec_count
+        assert (
+            get_client_vector_count(graphdb_driver, match_session.session.get_secret_value(), client.get_secret_value())
+            == target_vec_count
+        )
 
     assert_eventually(check_vector_persist)
 
@@ -55,8 +61,9 @@ def test_submit_and_delete(
     rng: Random,
     match_session: SessionCreationResponse,
     graphdb_driver: Driver,
+    secret_factory: Callable[[], SecretStr],
 ):
-    client = random_b64(rng)
+    client = secret_factory()
     target_vec_count = 5
 
     r = test_client.post(
@@ -82,7 +89,10 @@ def test_submit_and_delete(
     assert r.status_code == status.HTTP_202_ACCEPTED
 
     def check_vector_empty():
-        assert get_client_vector_count(graphdb_driver, match_session.session, client) == 0
+        assert (
+            get_client_vector_count(graphdb_driver, match_session.session.get_secret_value(), client.get_secret_value())
+            == 0
+        )
 
     assert_eventually(check_vector_empty)
 
@@ -90,15 +100,15 @@ def test_submit_and_delete(
 def test_submit_400_on_unknown_session(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session, client = random_b64(rng), random_b64(rng)
     target_vec_count = 5
 
     r = test_client.post(
         "/session/submit",
         json=ClientSubmissionRequest(
-            session=session,
-            client=client,
+            session=secret_factory(),
+            client=secret_factory(),
             vectors=[random_meta_vec(rng) for _ in range(target_vec_count)],
         ).model_dump(),
     )

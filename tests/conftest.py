@@ -1,6 +1,6 @@
 import os
 from random import Random
-from typing import Iterator
+from typing import Iterator, Callable
 
 from fable_model.broker import (
     SessionCreationResponse,
@@ -9,6 +9,7 @@ from fable_model.broker import (
 )
 from fable_model.match import MatchConfig, SimilarityMeasure, SimilarityAggregator
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 import pytest
 from neo4j import Driver
 from starlette import status
@@ -95,8 +96,17 @@ def eager_celery_worker():
 
 
 @pytest.fixture
-def match_session(test_client: TestClient, rng: Random) -> Iterator[SessionCreationResponse]:
-    session = random_b64(rng)
+def secret_factory(rng: Random) -> Callable[[], SecretStr]:
+    return lambda: SecretStr(random_b64(rng))
+
+
+@pytest.fixture
+def match_session(
+    test_client: TestClient,
+    rng: Random,
+    secret_factory: Callable[[], SecretStr],
+) -> Iterator[SessionCreationResponse]:
+    session = secret_factory()
 
     r = test_client.post(
         "/session",
