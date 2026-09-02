@@ -1,4 +1,5 @@
 from random import Random
+from typing import Callable
 
 from _pytest.monkeypatch import MonkeyPatch
 from fable_model.broker import (
@@ -10,17 +11,19 @@ from fable_model.broker import (
 )
 from fastapi.testclient import TestClient
 from fastapi import status
+from pydantic import SecretStr
 
 from fable_broker.dependencies import get_session_mapping
-from tests.helpers import random_b64, random_meta_vec, assert_eventually, detail_of
+from tests.helpers import random_meta_vec, assert_eventually, detail_of
 
 
 def test_result(
     test_client: TestClient,
     rng: Random,
     match_session: SessionCreationResponse,
+    secret_factory: Callable[[], SecretStr],
 ):
-    client = random_b64(rng)
+    client = secret_factory()
     vector = random_meta_vec(rng)
 
     r = test_client.post(
@@ -38,7 +41,7 @@ def test_result(
         "/session/submit",
         json=ClientSubmissionRequest(
             session=match_session.session,
-            client=random_b64(rng),
+            client=secret_factory(),
             vectors=[vector],
         ).model_dump(),
     )
@@ -77,9 +80,10 @@ def test_unfinished_matching(
     test_client: TestClient,
     rng: Random,
     match_session: SessionCreationResponse,
+    secret_factory: Callable[[], SecretStr],
 ):
     session = get_session_mapping()[match_session.session]
-    client = random_b64(rng)
+    client = secret_factory()
 
     r = test_client.post(
         "/session/submit",
@@ -120,12 +124,13 @@ def test_unfinished_matching(
 def test_400_on_invalid_session(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
     r = test_client.post(
         "/session/result",
         json=ClientResultRequest(
-            session=random_b64(rng),
-            client=random_b64(rng),
+            session=secret_factory(),
+            client=secret_factory(),
         ).model_dump(),
     )
 
@@ -137,12 +142,13 @@ def test_400_on_no_submitted_vectors(
     test_client: TestClient,
     rng: Random,
     match_session: SessionCreationResponse,
+    secret_factory: Callable[[], SecretStr],
 ):
     r = test_client.post(
         "/session/result",
         json=ClientResultRequest(
             session=match_session.session,
-            client=random_b64(rng),
+            client=secret_factory(),
         ).model_dump(),
     )
 

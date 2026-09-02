@@ -1,5 +1,6 @@
 from datetime import datetime
 from random import Random
+from typing import Callable
 
 from fable_model.broker import (
     SessionCreationRequest,
@@ -7,19 +8,22 @@ from fable_model.broker import (
     SessionDeletionRequest,
     SessionUpdateResponse,
     SessionUpdateRequest,
+    SessionGetResponse,
 )
 from fable_model.match import MatchConfig, SimilarityMeasure, SimilarityAggregator
 from fastapi import status
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
-from tests.helpers import random_b64, detail_of, assert_eventually
+from tests.helpers import detail_of, assert_eventually, random_b64
 
 
 def test_create(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session = random_b64(rng)
+    session = secret_factory()
 
     r = test_client.post(
         "/session",
@@ -45,11 +49,12 @@ def test_create(
 def test_create_400_on_non_positive_expiration(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
     r = test_client.post(
         "/session",
         json=SessionCreationRequest(
-            session=random_b64(rng),
+            session=secret_factory(),
             match_config=MatchConfig(
                 measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
                 thresholds=[0.9, 0.8],
@@ -65,11 +70,12 @@ def test_create_400_on_non_positive_expiration(
 def test_create_400_on_expiration_too_high(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
     r = test_client.post(
         "/session",
         json=SessionCreationRequest(
-            session=random_b64(rng),
+            session=secret_factory(),
             match_config=MatchConfig(
                 measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
                 thresholds=[0.9, 0.8],
@@ -85,9 +91,10 @@ def test_create_400_on_expiration_too_high(
 def test_create_400_on_session_exists(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
     req = SessionCreationRequest(
-        session=random_b64(rng),
+        session=secret_factory(),
         match_config=MatchConfig(
             measures=[SimilarityMeasure.jaccard],
             thresholds=[0.8],
@@ -107,8 +114,9 @@ def test_create_400_on_session_exists(
 def test_delete(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session = random_b64(rng)
+    session = secret_factory()
 
     r = test_client.post(
         "/session",
@@ -140,13 +148,12 @@ def test_delete(
 def test_delete_400_on_delete_invalid_session(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session = random_b64(rng)
-
     r = test_client.post(
         "/session",
         json=SessionCreationRequest(
-            session=session,
+            session=secret_factory(),
             match_config=MatchConfig(
                 measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
@@ -162,7 +169,7 @@ def test_delete_400_on_delete_invalid_session(
         "DELETE",
         "/session",
         json=SessionDeletionRequest(
-            session=session + "123",
+            session=secret_factory(),
             token=token,
         ).model_dump(),
     )
@@ -174,8 +181,9 @@ def test_delete_400_on_delete_invalid_session(
 def test_delete_401_on_unauthorized_delete(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session = random_b64(rng)
+    session = secret_factory()
 
     r = test_client.post(
         "/session",
@@ -189,14 +197,13 @@ def test_delete_401_on_unauthorized_delete(
     )
 
     assert r.status_code == status.HTTP_201_CREATED
-    token = SessionCreationResponse(**r.json()).token
 
     r = test_client.request(
         "DELETE",
         "/session",
         json=SessionDeletionRequest(
             session=session,
-            token=token + "foobar",
+            token=secret_factory(),
         ).model_dump(),
     )
 
@@ -207,8 +214,9 @@ def test_delete_401_on_unauthorized_delete(
 def test_update(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session = random_b64(rng)
+    session = secret_factory()
 
     r = test_client.post(
         "/session",
@@ -249,13 +257,12 @@ def test_update(
 def test_update_400_on_invalid_session(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session = random_b64(rng)
-
     r = test_client.post(
         "/session",
         json=SessionCreationRequest(
-            session=session,
+            session=secret_factory(),
             match_config=MatchConfig(
                 measures=[SimilarityMeasure.jaccard],
                 thresholds=[0.9],
@@ -271,7 +278,7 @@ def test_update_400_on_invalid_session(
     r = test_client.patch(
         "/session",
         json=SessionUpdateRequest(
-            session=session + "123",
+            session=secret_factory(),
             token=token,
         ).model_dump(),
     )
@@ -283,8 +290,9 @@ def test_update_400_on_invalid_session(
 def test_update_401_on_unauthorized_patch(
     test_client: TestClient,
     rng: Random,
+    secret_factory: Callable[[], SecretStr],
 ):
-    session = random_b64(rng)
+    session = secret_factory()
 
     r = test_client.post(
         "/session",
@@ -299,16 +307,46 @@ def test_update_401_on_unauthorized_patch(
 
     assert r.status_code == status.HTTP_201_CREATED
 
-    resp = SessionCreationResponse(**r.json())
-    token = resp.token
+    SessionCreationResponse(**r.json())
 
     r = test_client.patch(
         "/session",
         json=SessionUpdateRequest(
             session=session,
-            token=token + "foobar",
+            token=secret_factory(),
         ).model_dump(),
     )
 
     assert r.status_code == status.HTTP_401_UNAUTHORIZED
     assert detail_of(r) == "Incorrect session token"
+
+
+def test_get(
+    test_client: TestClient,
+    match_session: SessionCreationResponse,
+):
+    r = test_client.get(f"/session/{match_session.session.get_secret_value()}")
+
+    assert r.status_code == status.HTTP_200_OK
+
+    res = SessionGetResponse(**r.json())
+    # This config is the one that gets defined inside the fixture.
+    match_config = MatchConfig(
+        measures=[SimilarityMeasure.jaccard, SimilarityMeasure.dice],
+        thresholds=[0.8],
+        aggregator=SimilarityAggregator.avg,
+    )
+
+    assert res.session == match_session.session
+    assert res.expires_at == match_session.expires_at
+    assert res.match_config == match_config
+
+
+def test_get_404_session_not_found(
+    test_client: TestClient,
+    rng: Random,
+):
+    r = test_client.get(f"/session/{random_b64(rng)}")
+
+    assert r.status_code == status.HTTP_404_NOT_FOUND
+    assert detail_of(r) == "Session doesn't exist"

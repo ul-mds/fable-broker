@@ -13,12 +13,14 @@ from fable_model.broker import (
     VectorMatchBatch,
     ClientResultResponse,
     ClientResultRequest,
+    SessionGetResponse,
 )
 from fable_model.match import BaseMatchRequest
 from fable_client import PPRLClient, FableError
 from fastapi import APIRouter, status, Depends, HTTPException, Response
 from neo4j import Driver
 from starlette.background import BackgroundTasks
+from pydantic import SecretStr
 
 from fable_broker.config import Settings
 from fable_broker.dependencies import get_settings, next_secret, get_session_mapping, get_pprl_client, get_neo4j_driver
@@ -36,8 +38,8 @@ router = APIRouter()
 async def create_session(
     req: SessionCreationRequest,
     settings: Settings = Depends(get_settings),
-    session_token: str = Depends(next_secret),
-    session_mapping: dict[str, MatchSession] = Depends(get_session_mapping),
+    session_token: SecretStr = Depends(next_secret),
+    session_mapping: dict[SecretStr, MatchSession] = Depends(get_session_mapping),
     client: PPRLClient = Depends(get_pprl_client),
 ):
     """
@@ -79,9 +81,29 @@ async def create_session(
 
     session_mapping[req.session] = match_session
 
-    logger.debug(f"Created new session {mask_string(req.session)}, expires at {exp_ts} ({str(exp_dur)} from now)")
+    logger.debug(
+        f"Created new session {mask_string(req.session.get_secret_value())}, expires at {exp_ts} "
+        f"({str(exp_dur)} from now)"
+    )
 
     return SessionCreationResponse(session=req.session, token=session_token, expires_at=exp_ts)
+
+
+@router.get("/{session}", response_model=SessionGetResponse, status_code=status.HTTP_200_OK)
+async def get_session(
+    session: SecretStr,
+    session_mapping: dict[SecretStr, MatchSession] = Depends(get_session_mapping),
+):
+    if session not in session_mapping:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Session doesn't exist")
+
+    match_session = session_mapping[session]
+
+    return SessionGetResponse(
+        match_config=match_session.config,
+        expires_at=match_session.expires_at,
+        session=session,
+    )
 
 
 async def _delete_session_async(
@@ -89,20 +111,23 @@ async def _delete_session_async(
     match_session: MatchSession,
     driver: Driver,
 ):
-    logger.debug(f"Session cancellation requested, stopping tasks and deleting data for {mask_string(req.session)}...")
+    logger.debug(
+        f"Session cancellation requested, stopping tasks and deleting data for "
+        f"{mask_string(req.session.get_secret_value())}..."
+    )
 
     for task in match_session.match_tasks:
         if not task.ready():
             task.revoke()
 
-    delete_for_session(driver, req.session)
+    delete_for_session(driver, req.session.get_secret_value())
 
 
 @router.delete("", status_code=status.HTTP_202_ACCEPTED, response_model=None)
 async def delete_session(
     req: SessionDeletionRequest,
     background_tasks: BackgroundTasks,
-    session_mapping: dict[str, MatchSession] = Depends(get_session_mapping),
+    session_mapping: dict[SecretStr, MatchSession] = Depends(get_session_mapping),
     driver: Driver = Depends(get_neo4j_driver),
 ):
     """
@@ -127,7 +152,7 @@ async def delete_session(
 async def refresh_session(
     req: SessionUpdateRequest,
     settings: Settings = Depends(get_settings),
-    session_mapping: dict[str, MatchSession] = Depends(get_session_mapping),
+    session_mapping: dict[SecretStr, MatchSession] = Depends(get_session_mapping),
 ):
     """
     Checks whether the session that is supposed to be updated is registered. If so, tries to match the provided
@@ -138,7 +163,6 @@ async def refresh_session(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Session doesn't exist")
 
     match_session = session_mapping[req.session]
-
     if match_session.token != req.token:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect session token")
 
@@ -148,7 +172,7 @@ async def refresh_session(
     match_session.expires_at = exp_ts
 
     logger.debug(
-        f"Refreshed session {mask_string(req.session)}, expires at {exp_ts} "
+        f"Refreshed session {mask_string(req.session.get_secret_value())}, expires at {exp_ts} "
         f"({str(timedelta(seconds=settings.refresh_session_interval))} from now)"
     )
 
@@ -163,11 +187,11 @@ async def _submit_vectors_async(
     match_session: MatchSession,
     driver: Driver,
 ):
-    logger.debug(f"Preparing {len(req.vectors)} vectors from client {mask_string(req.client)}...")
+    logger.debug(f"Preparing {len(req.vectors)} vectors from client {mask_string(req.client.get_secret_value())}...")
 
     task: AsyncResult = persist_client_vectors.delay(
-        req.session,
-        req.client,
+        req.session.get_secret_value(),
+        req.client.get_secret_value(),
         [v.model_dump() for v in req.vectors],
     )
 
@@ -182,7 +206,10 @@ async def _submit_vectors_async(
             continue
 
         range_lst.append(
-            ClientVectorBatch(client=other_client, ids=get_vector_ids_for_client(driver, req.session, other_client))
+            ClientVectorBatch(
+                client=other_client,
+                ids=get_vector_ids_for_client(driver, req.session.get_secret_value(), other_client.get_secret_value()),
+            )
         )
 
     if len(range_lst) == 0:
@@ -210,7 +237,7 @@ async def _submit_vectors_async(
 async def submit_vectors(
     req: ClientSubmissionRequest,
     background_tasks: BackgroundTasks,
-    session_mapping: dict[str, MatchSession] = Depends(get_session_mapping),
+    session_mapping: dict[SecretStr, MatchSession] = Depends(get_session_mapping),
     driver: Driver = Depends(get_neo4j_driver),
 ):
     """
@@ -231,7 +258,7 @@ async def submit_vectors(
 @router.post("/result", status_code=status.HTTP_200_OK, response_model=ClientResultResponse)
 async def get_results(
     req: ClientResultRequest,
-    session_mapping: dict[str, MatchSession] = Depends(get_session_mapping),
+    session_mapping: dict[SecretStr, MatchSession] = Depends(get_session_mapping),
     driver: Driver = Depends(get_neo4j_driver),
 ):
     """
@@ -258,5 +285,5 @@ async def get_results(
     else:
         return ClientResultResponse(
             finished=matching_finished,
-            matches=get_matches_for_client(driver, req.session, req.client),
+            matches=get_matches_for_client(driver, req.session.get_secret_value(), req.client.get_secret_value()),
         )

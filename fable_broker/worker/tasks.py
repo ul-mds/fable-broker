@@ -75,7 +75,7 @@ def match_and_persist(raw_batch: dict):
     logger.info(
         "Fetching %d vectors for client %s...",
         len(batch.domain.ids),
-        mask_string(batch.domain.client),
+        mask_string(batch.domain.client.get_secret_value()),
     )
     domain_vectors = get_vectors_by_id(driver, batch.domain.ids)
 
@@ -83,7 +83,7 @@ def match_and_persist(raw_batch: dict):
         logger.info(
             "Fetching %d vectors for client %s...",
             len(range_batch.ids),
-            mask_string(range_batch.client),
+            mask_string(range_batch.client.get_secret_value()),
         )
         range_vectors = get_vectors_by_id(driver, range_batch.ids)
 
@@ -95,4 +95,10 @@ def match_and_persist(raw_batch: dict):
         ).matches
         logger.info("Received %d matches", len(matches))
 
-        insert_matches(driver, batch.session, batch.domain.client, range_batch.client, matches)
+        insert_matches(
+            driver,
+            batch.session.get_secret_value(),
+            batch.domain.client.get_secret_value(),
+            range_batch.client.get_secret_value(),
+            matches,
+        )

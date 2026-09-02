@@ -1,5 +1,5 @@
 ![GitHub Release](https://img.shields.io/github/v/release/ul-mds/fable-broker)
-![Code Coverage](https://img.shields.io/badge/Coverage-95%25-brightgreen.svg)
+![Code Coverage](https://img.shields.io/badge/Coverage-93%25-green.svg)
 ![License](https://img.shields.io/github/license/ul-mds/fable-broker)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 
@@ -81,9 +81,9 @@ assert r.status_code == status.HTTP_201_CREATED
 
 resp = SessionCreationResponse(**r.json())
 
-print(resp.session)
+print(resp.session.get_secret_value())
 print(datetime.fromtimestamp(resp.expires_at))
-print(resp.token)
+print(resp.token.get_secret_value())
 ```
 
 ```text
@@ -126,7 +126,7 @@ assert r.status_code == status.HTTP_200_OK
 
 resp = SessionUpdateResponse(**r.json())
 
-print(resp.session)
+print(resp.session.get_secret_value())
 print(datetime.fromtimestamp(resp.expires_at))
 ```
 
@@ -158,6 +158,47 @@ r = httpx.request(
 )
 
 assert r.status_code == status.HTTP_202_ACCEPTED
+```
+
+### Retrieving session information
+
+Every party that is in possession of a session identifier is able to retrieve the expiration timestamp and the matching
+configuration for that session.
+
+```python
+from datetime import datetime
+from fable_model.broker import SessionGetResponse
+from fastapi import status
+import httpx
+
+
+r = httpx.get("http://localhost:8080/session/my-session-id")
+
+assert r.status_code == status.HTTP_200_OK
+
+resp = SessionGetResponse(**r.json())
+
+print(resp.session.get_secret_value())
+print(datetime.fromtimestamp(resp.expires_at))
+print(resp.match_config.model_dump_json(indent=2))
+```
+
+```text
+my-session-id
+2026-07-10 12:03:01
+{
+  "measures": [
+    "jaccard",
+    "dice"
+  ],
+  "thresholds": [
+    0.9
+  ],
+  "aggregator": "avg",
+  "aggregator_args": {},
+  "method": "crosswise"
+}
+
 ```
 
 ### Submitting vectors and receiving results
