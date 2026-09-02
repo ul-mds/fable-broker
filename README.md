@@ -1,5 +1,5 @@
 ![GitHub Release](https://img.shields.io/github/v/release/ul-mds/fable-broker)
-![Code Coverage](https://img.shields.io/badge/Coverage-95%25-brightgreen.svg)
+![Code Coverage](https://img.shields.io/badge/Coverage-93%25-green.svg)
 ![License](https://img.shields.io/github/license/ul-mds/fable-broker)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 
