@@ -58,8 +58,13 @@ By default, this limit is set to one hour.
 
 ```python
 from datetime import datetime
-from fable_model.broker import SessionCreationRequest, SessionCreationResponse
-from fable_model.match import MatchConfig, SimilarityAggregator, SimilarityMeasure
+from fable_model import (
+    SessionCreationRequest,
+    SessionCreationResponse,
+    MatchConfig,
+    SimilarityAggregator,
+    SimilarityMeasure,
+)
 from fastapi import status
 import httpx
 
@@ -109,7 +114,7 @@ This is done by performing a `PATCH` request to the same endpoint.
 
 ```python
 from datetime import datetime
-from fable_model.broker import SessionUpdateRequest, SessionUpdateResponse
+from fable_model import SessionUpdateRequest, SessionUpdateResponse
 from fastapi import status
 import httpx
 
@@ -143,7 +148,7 @@ This will immediately prevent clients from submitting any more bit vectors and c
 Match results will be purged as soon as possible.
 
 ```python
-from fable_model.broker import SessionDeletionRequest
+from fable_model import SessionDeletionRequest
 from fastapi import status
 import httpx
 
@@ -167,7 +172,7 @@ configuration for that session.
 
 ```python
 from datetime import datetime
-from fable_model.broker import SessionGetResponse
+from fable_model import SessionGetResponse
 from fastapi import status
 import httpx
 
@@ -207,7 +212,7 @@ One is for submitting bit vectors and one is for requesting results.
 To submit bit vectors, issue a `POST` request to the `/session/submit` endpoint.
 
 ```python
-from fable_model.broker import ClientSubmissionRequest, MetaBitVectorEntity, BitVectorMetadata
+from fable_model import ClientSubmissionRequest, MetaBitVectorEntity, BitVectorMetadata
 from fastapi import status
 import httpx
 
@@ -247,7 +252,7 @@ This also enables a client to submit their vectors in fixed-size chunks instead 
 To be able to retrieve matches, a second client needs to submit vectors first.
 
 ```python
-from fable_model.broker import ClientSubmissionRequest, MetaBitVectorEntity, BitVectorMetadata
+from fable_model import ClientSubmissionRequest, MetaBitVectorEntity, BitVectorMetadata
 from fastapi import status
 import httpx
 
@@ -279,7 +284,7 @@ Once matching has concluded, clients can retrieve matches for the vectors they s
 against the `/session/result` endpoint.
 
 ```python
-from fable_model.broker import ClientResultRequest, ClientResultResponse
+from fable_model import ClientResultRequest, ClientResultResponse
 from fastapi import status
 import httpx
 
