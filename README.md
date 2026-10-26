@@ -101,7 +101,6 @@ my-session-id
 > Treat the session identifier as a secret that you can only share with session participants you trust.
 > It shouldn't be predictable.
 > Anyone in possession of the session identifier can submit vectors to the session, affecting the quality of results.
-> They can also choose to delete the session preemptively.
 
 The session token is necessary to perform refresh and cancellation operations on a session.
 Only the client that issued the session creation request should be in possession of this token.
