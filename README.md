@@ -350,14 +350,14 @@ These variables can either be defined in `.env` or in the `environment` section 
 | TASK_CLEANUP_INTERVAL    | Time in seconds that is waited until the service checks again for expired sessions. | 10                                  |
 | EXPOSE_DOCS              | If set to true, all FastAPI documentation endpoints are exposed.<sup>2)</sup>       | 1                                   |
 
-<sup>1)</sup> After a session got refreshed, this session will expire in `REFRESH_SESSION_INTERVAL` seconds.
+<sup>1)</sup> After a session got refreshed, this session will expire in `REFRESH_SESSION_INTERVAL` seconds.<br>
 <sup>2)</sup> The documentation endpoints are `/openapi.json`, `/docs` and `/redoc`.
 
 ## Development and running tests
 
 Tests are implemented with [pytest](https://pypi.org/project/pytest/).
 Set up tests by copying `.env.example` into a new file called `.env` and spin up all necessary containers.
-Pre-existing environment variables take precedence and will not bew overwritten by the contents of `.env`.
+Pre-existing environment variables take precedence and will not be overwritten by the contents of `.env`.
 
 ```bash
 cp .env.example .env
