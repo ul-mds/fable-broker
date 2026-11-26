@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager, ExitStack
-from datetime import datetime
 import logging
+import time
 from typing import AsyncIterator
 
 from fable_client import PPRLClient
@@ -8,6 +8,7 @@ from fable_model import HealthResponse, ServiceBaseInformation
 from fastapi import FastAPI
 from fastapi_utils.tasks import repeat_every
 from neo4j import Driver
+from pydantic import SecretStr
 
 from fable_broker.config import Settings
 from fable_broker.dependencies import get_session_mapping
@@ -24,39 +25,34 @@ expose_docs = Settings().expose_docs
 
 def free_session_tasks(driver: Driver):
     logger.debug("Running session cleanup task...")
-    now = datetime.now().timestamp()
+    now = time.time()
 
-    sessions_to_clear: list[str] = []
+    sessions_to_clear: list[SecretStr] = []
 
-    # First pass: Clear match sessions if necessary.
+    # First: Collect all expired sessions.
     for ses, match_session in get_session_mapping().items():
-        if now > match_session.expires_at:
+        if now >= match_session.expires_at:
             sessions_to_clear.append(ses)
 
     for s in sessions_to_clear:
-        logger.debug(f"Clearing session {s} because it expired")
+        logger.debug("Clearing session %s because it expired", mask_string(s.get_secret_value()))
+
+        task_ids_freed: list[str] = []
 
         # Clear tasks.
         for task in get_session_mapping()[s].match_tasks:
             if not task.ready():
                 task.revoke()
+            task.forget()
+            task_ids_freed.append(task.id)
+
+        if len(task_ids_freed) != 0:
+            logger.debug("Freed %s task(s) for session %s", len(task_ids_freed), mask_string(s.get_secret_value()))
 
         # Remove mapping.
         del get_session_mapping()[s]
         # Delete from cache.
-        delete_for_session(driver, s)
-
-    # Second pass: Collect all tasks that are finished.
-    for ses, match_session in get_session_mapping().items():
-        for task in match_session.match_tasks:
-            task_id_freed: list[str] = []
-
-            if task.ready():
-                task.forget()
-                task_id_freed.append(task.id)
-
-            if len(task_id_freed) != 0:
-                logger.debug(f"Freed {len(task_id_freed)} task(s) for session {mask_string(ses)}")
+        delete_for_session(driver, s.get_secret_value())
 
 
 @asynccontextmanager
